@@ -1,0 +1,145 @@
+{
+  "run_id": "84282c2b4a4c400a8fe3cdc53a2c8a76",
+  "created_at": "2026-07-12T09:41:49.848408Z",
+  "mode": "demo",
+  "question": "How can prompt-injection defenses be evaluated reliably in production LLM systems?",
+  "plan": {
+    "objective": "Produce a balanced, evidence-led answer to: How can prompt-injection defenses be evaluated reliably in production LLM systems?",
+    "subquestions": [
+      "What are the core definitions and mechanisms?",
+      "What evidence supports the main claims?",
+      "Where do credible sources disagree or show uncertainty?",
+      "What practical implications follow from the evidence?"
+    ],
+    "search_queries": [
+      "How can prompt-injection defenses be evaluated reliably in production LLM systems? systematic review",
+      "How can prompt-injection defenses be evaluated reliably in production LLM systems? official guidance",
+      "How can prompt-injection defenses be evaluated reliably in production LLM systems? recent evidence limitations",
+      "How can prompt-injection defenses be evaluated reliably in production LLM systems? expert consensus"
+    ],
+    "evaluation_criteria": [
+      "Source authority and primary evidence",
+      "Recency and methodological quality",
+      "Agreement across independent sources",
+      "Clear separation of fact, inference, and uncertainty"
+    ],
+    "risk_notes": [
+      "Demo mode uses illustrative sources and does not perform live web retrieval."
+    ]
+  },
+  "executive_summary": "The full multi-agent workflow completed in demo mode. Configure a live API key to replace illustrative evidence with current web sources.",
+  "report_markdown": "# Research report\n\n## Question\n\nHow can prompt-injection defenses be evaluated reliably in production LLM systems?\n\n## Executive assessment\n\nThis run demonstrates the complete orchestration path without calling an external model. The live configuration replaces the illustrative material below with current web evidence, source metadata, a claim ledger, adversarial critique, and a final synthesis.\n\n## Analytical framework\n\nThe planner decomposed the question into 4 subquestions and 4 targeted searches. Evidence is evaluated for authority, recency, independence, and methodological quality.\n\n## Findings\n\n1. **Definitions and scope** should be established before comparing claims.\n2. **Primary evidence and official guidance** should carry more weight than unattributed summaries.\n3. **Contradictory evidence** should be preserved rather than forced into a single conclusion.\n4. **Uncertainty** should be visible in both the narrative and claim-level confidence scores.\n\n## Evidence ledger\n\nThe demonstration includes 3 source records. In live mode, each record is extracted from web-search output and attached to claims by identifier.\n\n## Limitations\n\n- No live retrieval was performed.\n- The listed URLs are illustrative placeholders.\n- The report demonstrates system behaviour, not a factual answer to the submitted question.\n\n## Recommended next step\n\nSet `APP_MODE=live` and provide `OPENAI_API_KEY` to run the same workflow with current sources and model-generated analysis.\n",
+  "sources": [
+    {
+      "id": "ea8fcea58d",
+      "title": "Illustrative primary research record",
+      "url": "https://example.org/primary-research",
+      "domain": "example.org",
+      "snippet": "Placeholder for a primary or peer-reviewed source in live mode.",
+      "accessed_at": "2026-07-12T09:41:49.848226Z",
+      "trust_score": 0.72
+    },
+    {
+      "id": "c12aad9333",
+      "title": "Illustrative official guidance",
+      "url": "https://example.gov/guidance",
+      "domain": "example.gov",
+      "snippet": "Placeholder for an official or regulatory source in live mode.",
+      "accessed_at": "2026-07-12T09:41:49.848251Z",
+      "trust_score": 0.92
+    },
+    {
+      "id": "fce1fd180b",
+      "title": "Illustrative independent review",
+      "url": "https://example.edu/review",
+      "domain": "example.edu",
+      "snippet": "Placeholder for an independent synthesis or systematic review.",
+      "accessed_at": "2026-07-12T09:41:49.848281Z",
+      "trust_score": 0.92
+    }
+  ],
+  "claims": [
+    {
+      "id": "c08466a720",
+      "statement": "A reliable conclusion should be supported by more than one independent source type.",
+      "source_ids": [
+        "ea8fcea58d",
+        "c12aad9333"
+      ],
+      "confidence": 0.9,
+      "status": "supported",
+      "notes": "Methodological claim used to demonstrate the evidence ledger."
+    },
+    {
+      "id": "46a9478310",
+      "statement": "Current evidence may contain gaps that should be stated explicitly.",
+      "source_ids": [
+        "fce1fd180b"
+      ],
+      "confidence": 0.75,
+      "status": "supported",
+      "notes": "The live pipeline asks the critic and fact-checker to identify these gaps."
+    }
+  ],
+  "limitations": [
+    "Demo mode does not retrieve current information.",
+    "Illustrative source URLs are placeholders and must not be cited as evidence."
+  ],
+  "trace": [
+    {
+      "agent": "planner",
+      "status": "completed",
+      "started_at": "2026-07-12T09:41:49.848133Z",
+      "finished_at": "2026-07-12T09:41:49.848143Z",
+      "input_summary": "How can prompt-injection defenses be evaluated reliably in production LLM systems?",
+      "output_summary": "Plan with 4 subquestions and 4 searches.",
+      "metadata": {}
+    },
+    {
+      "agent": "researcher",
+      "status": "completed",
+      "started_at": "2026-07-12T09:41:49.848156Z",
+      "finished_at": "2026-07-12T09:41:49.848283Z",
+      "input_summary": "Produce a balanced, evidence-led answer to: How can prompt-injection defenses be evaluated reliably in production LLM systems?",
+      "output_summary": "Produced 3 items.",
+      "metadata": {}
+    },
+    {
+      "agent": "critic",
+      "status": "completed",
+      "started_at": "2026-07-12T09:41:49.848291Z",
+      "finished_at": "2026-07-12T09:41:49.848291Z",
+      "input_summary": "Illustrative evidence dossier",
+      "output_summary": "Demo review: verify every material claim against live primary sources before use.",
+      "metadata": {}
+    },
+    {
+      "agent": "fact_checker",
+      "status": "completed",
+      "started_at": "2026-07-12T09:41:49.848296Z",
+      "finished_at": "2026-07-12T09:41:49.848371Z",
+      "input_summary": "Demo review: verify every material claim against live primary sources before use.",
+      "output_summary": "Produced 2 items.",
+      "metadata": {}
+    },
+    {
+      "agent": "writer",
+      "status": "completed",
+      "started_at": "2026-07-12T09:41:49.848377Z",
+      "finished_at": "2026-07-12T09:41:49.848380Z",
+      "input_summary": "2 claims and 3 illustrative sources",
+      "output_summary": "# Research report  ## Question  How can prompt-injection defenses be evaluated reliably in production LLM systems?  ## Executive assessment  This run demonstrates the complete orchestration path without calling an external model. The live configuration replaces the illustrative material below with current web evidence, source metadata, a claim ledger, adversarial critique, and a final synthesis.  ## Analytical framework  The planner decomposed the question into 4 subquestions and 4 targeted searches. Evidence is evaluated for authority, recency, independence, and methodological quality.  ## Findings  1. **Definitions and scope** should be established before comparing claims. 2. **Primary evidence and official guidance** should carry more weight than unattributed summaries. 3. **Contradicto",
+      "metadata": {}
+    }
+  ],
+  "quality_score": 72,
+  "metrics": {
+    "depth": "standard",
+    "style": "analytical",
+    "elapsed_seconds": 0.0,
+    "source_count": 3,
+    "claim_count": 2,
+    "agent_count": 5,
+    "input_security_score": 0
+  }
+}
