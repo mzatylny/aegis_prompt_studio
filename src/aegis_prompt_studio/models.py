@@ -156,3 +156,4 @@ class ResearchResult(BaseModel):
     trace: list[AgentTrace]
     quality_score: int = Field(ge=0, le=100)
     metrics: dict[str, int | float | str] = Field(default_factory=dict)
+

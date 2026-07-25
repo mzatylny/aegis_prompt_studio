@@ -12,11 +12,11 @@ The application includes a Streamlit interface, a FastAPI service, a command-lin
 ### Prompt Security Scanner
 
 - Unicode normalization and zero-width character removal
-- Base64, hexadecimal, URL-encoding, and ROT13 inspection
+- Bounded multi-layer Base64, hexadecimal, URL-encoding, and ROT13 inspection
 - Weighted risk score from 0 to 100
 - Evidence spans, confidence values, severity, and remediation
 - Hardened prompt wrapper generation
-- Adversarial prompt mutation suite
+- 30-case adversarial prompt mutation suite, including nested and structured-data variants
 - JSON and standalone HTML reports
 - API and CLI access
 
@@ -26,8 +26,10 @@ The application includes a Streamlit interface, a FastAPI service, a command-lin
 - Structured research plan
 - OpenAI Responses API web search in live mode
 - Domain allowlists and blocklists
+- Post-retrieval domain-policy enforcement with canonical URL validation
 - Researcher, critic, fact-checker, and writer stages
 - Claim ledger with confidence and support status
+- Hallucinated source-ID rejection and citation-integrity scoring
 - Source extraction and trust scoring
 - Agent trace with timings
 - Markdown and JSON exports
@@ -188,6 +190,19 @@ Services:
 The scanner is a defensive signal system, not a mathematical proof of safety. Production deployments should combine it with least-privilege tools, explicit authorization, output schema validation, secret isolation, retrieval sanitization, rate limits, audit logs, and human approval for consequential actions.
 
 The research pipeline treats user topics and retrieved pages as untrusted data. It instructs agents not to execute embedded instructions and keeps source metadata separate from the final narrative.
+
+Retrieved source URLs are canonicalized and checked again after provider retrieval. Local, private,
+credential-bearing, blocked, and out-of-allowlist URLs are excluded. Claim source identifiers are
+validated against the resulting source index before the writer stage.
+
+## Version 1.1 highlights
+
+- recursive decoding with strict depth, size, and candidate limits
+- complete markup escaping in generated hardened wrappers
+- post-retrieval source-policy enforcement and suffix-spoofing protection
+- citation-integrity metrics and rejection of invented source identifiers
+- input limits across scan, research, and mutation API boundaries
+- explicit Pandas runtime dependency and expanded security regression coverage
 
 ## License
 

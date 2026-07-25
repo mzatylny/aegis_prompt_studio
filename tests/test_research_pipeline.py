@@ -1,6 +1,7 @@
 from aegis_prompt_studio.config import Settings
-from aegis_prompt_studio.models import ResearchQuestion
+from aegis_prompt_studio.models import Claim, ResearchQuestion, SourceRecord
 from aegis_prompt_studio.research.pipeline import ResearchPipeline
+from aegis_prompt_studio.research.provider import ClaimLedger
 
 
 def demo_settings() -> Settings:
@@ -40,3 +41,28 @@ def test_high_risk_topic_is_flagged_as_untrusted() -> None:
     )
     assert result.metrics["input_security_score"] >= 65
     assert "high-risk prompt-injection" in result.limitations[0]
+
+
+def test_claim_ledger_removes_hallucinated_source_ids() -> None:
+    source = SourceRecord(
+        id="known-source",
+        title="Official guidance",
+        url="https://example.gov/guidance",
+        domain="example.gov",
+    )
+    ledger = ClaimLedger(
+        claims=[
+            Claim(
+                statement="A claim with invented support",
+                source_ids=["invented-source"],
+                confidence=0.98,
+                status="supported",
+            )
+        ]
+    )
+    validated = ResearchPipeline._validate_ledger(ledger, [source])
+    claim = validated.claims[0]
+    assert claim.source_ids == []
+    assert claim.status == "unsupported"
+    assert claim.confidence == 0.2
+    assert "Removed unknown source IDs" in claim.notes

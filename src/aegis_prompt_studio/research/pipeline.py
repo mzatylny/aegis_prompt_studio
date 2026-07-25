@@ -8,9 +8,11 @@ from time import perf_counter
 from aegis_prompt_studio.config import Settings, get_settings
 from aegis_prompt_studio.models import (
     AgentTrace,
+    Claim,
     ResearchPlan,
     ResearchQuestion,
     ResearchResult,
+    SourceRecord,
 )
 from aegis_prompt_studio.research.demo import demo_claims, demo_plan, demo_report, demo_sources
 from aegis_prompt_studio.research.provider import ClaimLedger, OpenAIResearchProvider, WebEvidence
@@ -50,6 +52,7 @@ class ResearchPipeline:
                 "claim_count": len(result.claims),
                 "agent_count": len(traces),
                 "input_security_score": security_result.risk_score,
+                **self._evidence_metrics(result),
             }
         )
         result.quality_score = self._quality_score(result)
@@ -102,6 +105,7 @@ class ResearchPipeline:
         traces.append(checker.trace)
         ledger = checker.value
         assert isinstance(ledger, ClaimLedger)
+        ledger = self._validate_ledger(ledger, evidence.sources)
 
         writer = self._stage(
             "writer",
@@ -209,12 +213,60 @@ class ResearchPipeline:
         return " ".join(collected)[:1800] or report[:1800]
 
     @staticmethod
+    def _validate_ledger(ledger: ClaimLedger, sources: list[SourceRecord]) -> ClaimLedger:
+        """Remove hallucinated source references before claims reach the writer."""
+        valid_ids = {source.id for source in sources}
+        validated: list[Claim] = []
+        for original in ledger.claims:
+            claim = original.model_copy(deep=True)
+            unknown_ids = [source_id for source_id in claim.source_ids if source_id not in valid_ids]
+            claim.source_ids = [source_id for source_id in claim.source_ids if source_id in valid_ids]
+            if unknown_ids:
+                suffix = f"Removed unknown source IDs: {', '.join(unknown_ids)}."
+                claim.notes = f"{claim.notes} {suffix}".strip()
+            if not claim.source_ids:
+                claim.status = "unsupported"
+                claim.confidence = min(claim.confidence, 0.2)
+                claim.notes = (
+                    f"{claim.notes} No verified source reference supports this claim."
+                ).strip()
+            validated.append(claim)
+        return ledger.model_copy(update={"claims": validated}, deep=True)
+
+    @staticmethod
+    def _evidence_metrics(result: ResearchResult) -> dict[str, int | float | str]:
+        source_ids = {source.id for source in result.sources}
+        total = len(result.claims)
+        cited = sum(
+            1
+            for claim in result.claims
+            if claim.source_ids and all(source_id in source_ids for source_id in claim.source_ids)
+        )
+        supported = sum(1 for claim in result.claims if claim.status == "supported")
+        return {
+            "citation_integrity_percent": round((cited / total) * 100, 1) if total else 100.0,
+            "supported_claim_percent": round((supported / total) * 100, 1) if total else 0.0,
+            "unique_source_domains": len({source.domain for source in result.sources}),
+        }
+
+    @staticmethod
     def _quality_score(result: ResearchResult) -> int:
         if result.mode == "demo":
             return 72
-        source_score = min(30, len(result.sources) * 3)
-        trusted_score = min(20, int(sum(source.trust_score for source in result.sources) * 2))
-        claim_score = min(25, sum(5 for claim in result.claims if claim.status == "supported"))
+        source_score = min(25, len(result.sources) * 3)
+        trusted_score = min(15, int(sum(source.trust_score for source in result.sources) * 2))
+        claim_score = min(20, sum(4 for claim in result.claims if claim.status == "supported"))
+        integrity_score = round(
+            15 * float(result.metrics.get("citation_integrity_percent", 0)) / 100
+        )
         uncertainty_score = 10 if result.limitations else 0
         workflow_score = min(15, len(result.trace) * 3)
-        return min(100, source_score + trusted_score + claim_score + uncertainty_score + workflow_score)
+        return min(
+            100,
+            source_score
+            + trusted_score
+            + claim_score
+            + integrity_score
+            + uncertainty_score
+            + workflow_score,
+        )

@@ -109,3 +109,4 @@ The demonstration includes {len(sources)} source records. In live mode, each rec
 
 Set `APP_MODE=live` and provide `OPENAI_API_KEY` to run the same workflow with current sources and model-generated analysis.
 """
+

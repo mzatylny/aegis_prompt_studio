@@ -17,3 +17,4 @@ ui:
 
 docker:
 	docker compose up --build
+

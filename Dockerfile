@@ -12,3 +12,4 @@ COPY .streamlit ./.streamlit
 
 EXPOSE 8000 8501
 CMD ["streamlit", "run", "src/aegis_prompt_studio/ui.py", "--server.address=0.0.0.0"]
+

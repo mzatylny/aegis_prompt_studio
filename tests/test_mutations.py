@@ -12,3 +12,12 @@ def test_mutations_include_encoded_variant() -> None:
     techniques = {variant.technique for variant in result.variants}
     assert "base64" in techniques
     assert "zero-width" in techniques
+
+
+def test_mutation_engine_supports_declared_maximum() -> None:
+    result = PromptMutationEngine().generate("test payload", 30)
+    assert len(result.variants) == 30
+    assert len({variant.technique for variant in result.variants}) == 30
+    assert {"nested-base64", "hex", "tool-result"} <= {
+        variant.technique for variant in result.variants
+    }

@@ -40,3 +40,4 @@ code,pre{{white-space:pre-wrap;background:#0a0f1d;padding:4px 7px;border-radius:
 </body></html>"""
     destination.write_text(document, encoding="utf-8")
     return destination
+

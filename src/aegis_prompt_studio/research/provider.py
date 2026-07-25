@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from aegis_prompt_studio.config import Settings
 from aegis_prompt_studio.models import Claim, ResearchPlan, ResearchQuestion, SourceRecord
-from aegis_prompt_studio.research.citations import extract_sources
+from aegis_prompt_studio.research.citations import extract_sources, filter_sources
 
 
 class ClaimLedger(BaseModel):
@@ -53,6 +53,7 @@ class OpenAIResearchProvider:
         return response.output_parsed
 
     def research(self, request: ResearchQuestion, plan: ResearchPlan) -> WebEvidence:
+        source_limit = min(request.max_sources, self.settings.max_research_sources)
         tool: dict = {"type": "web_search", "search_context_size": "high" if request.depth == "deep" else "medium"}
         filters: dict[str, list[str]] = {}
         if request.allowed_domains:
@@ -86,7 +87,13 @@ Requirements:
             include=["web_search_call.action.sources"],
             input=prompt,
         )
-        sources = extract_sources(response, limit=request.max_sources)
+        # Tool-side filters reduce retrieval noise; post-filtering is the actual policy boundary.
+        sources = filter_sources(
+            extract_sources(response, limit=max(source_limit * 3, source_limit)),
+            allowed_domains=request.allowed_domains,
+            blocked_domains=request.blocked_domains,
+            limit=source_limit,
+        )
         return WebEvidence(text=response.output_text, sources=sources, raw_response=response)
 
     def critique(self, request: ResearchQuestion, evidence: WebEvidence) -> str:

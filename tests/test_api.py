@@ -31,6 +31,14 @@ def test_mutation_endpoint() -> None:
     assert len(response.json()["variants"]) == 4
 
 
+def test_mutation_endpoint_enforces_input_limit() -> None:
+    response = client.post(
+        "/v1/security/mutate",
+        json={"text": "x" * 50_001, "count": 4},
+    )
+    assert response.status_code == 413
+
+
 def test_research_endpoint_uses_demo_mode_by_default() -> None:
     response = client.post(
         "/v1/research/run",

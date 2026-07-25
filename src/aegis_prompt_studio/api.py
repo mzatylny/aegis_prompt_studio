@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,6 +23,7 @@ settings = get_settings()
 scanner = PromptSecurityScanner(max_chars=settings.max_input_chars)
 mutator = PromptMutationEngine()
 pipeline = ResearchPipeline(settings)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Aegis Prompt Studio API",
@@ -55,6 +58,8 @@ def scan_prompt(request: SecurityScanRequest) -> SecurityScanResult:
 
 @app.post("/v1/security/mutate", response_model=MutationResult)
 def mutate_prompt(request: MutationRequest) -> MutationResult:
+    if len(request.text) > settings.max_input_chars:
+        raise HTTPException(status_code=413, detail="Input exceeds configured character limit")
     return mutator.generate(request.text, request.count)
 
 
@@ -65,4 +70,8 @@ def run_research(request: ResearchQuestion) -> ResearchResult:
     try:
         return pipeline.run(request)
     except Exception as exc:  # pragma: no cover - protects API boundary in live mode
-        raise HTTPException(status_code=502, detail=f"Research pipeline failed: {exc}") from exc
+        logger.exception("Research pipeline failed")
+        raise HTTPException(
+            status_code=502,
+            detail="Research pipeline failed. Check server logs for the diagnostic trace.",
+        ) from exc

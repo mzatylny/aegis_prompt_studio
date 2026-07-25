@@ -92,3 +92,4 @@ FastAPI response models validate every public response.
 - persist traces and results in a database
 - add authentication and per-user quotas at the API layer
 - connect a vector store for internal document research
+

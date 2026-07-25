@@ -20,3 +20,4 @@ API_PID=$!
 trap 'kill "$API_PID" 2>/dev/null || true' EXIT INT TERM
 
 streamlit run src/aegis_prompt_studio/ui.py --server.port=8501
+

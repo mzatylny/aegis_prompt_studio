@@ -32,3 +32,4 @@ The demonstration includes 3 source records. In live mode, each record is extrac
 ## Recommended next step
 
 Set `APP_MODE=live` and provide `OPENAI_API_KEY` to run the same workflow with current sources and model-generated analysis.
+

@@ -199,11 +199,18 @@ with research_tab:
         depth = c1.selectbox("Depth", ["quick", "standard", "deep"], index=1)
         style = c2.selectbox("Output style", ["analytical", "executive", "academic"], index=0)
         max_sources = c3.slider("Maximum sources", 3, 20, 10)
-        domains = st.text_input("Allowed domains (comma-separated, optional)")
+        domain_c1, domain_c2 = st.columns(2)
+        domains = domain_c1.text_input("Allowed domains (comma-separated, optional)")
+        blocked_domains_input = domain_c2.text_input(
+            "Blocked domains (comma-separated, optional)"
+        )
         submitted = st.form_submit_button("Launch research workflow", type="primary", use_container_width=True)
 
     if submitted:
         allowed_domains = [item.strip() for item in domains.split(",") if item.strip()]
+        blocked_domains = [
+            item.strip() for item in blocked_domains_input.split(",") if item.strip()
+        ]
         with st.status("Running agent workflow…", expanded=True) as status:
             st.write("Security gate: treating the research question as untrusted data")
             request = ResearchQuestion(
@@ -212,6 +219,7 @@ with research_tab:
                 output_style=style,
                 max_sources=max_sources,
                 allowed_domains=allowed_domains,
+                blocked_domains=blocked_domains,
             )
             research_result = pipeline.run(request)
             st.write("Planner, researcher, critic, fact-checker and writer completed")
@@ -220,11 +228,15 @@ with research_tab:
 
     research_result = st.session_state.get("research_result")
     if research_result:
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Quality score", f"{research_result.quality_score}/100")
         m2.metric("Sources", len(research_result.sources))
         m3.metric("Claims", len(research_result.claims))
         m4.metric("Mode", research_result.mode.upper())
+        m5.metric(
+            "Citation integrity",
+            f"{research_result.metrics.get('citation_integrity_percent', 0)}%",
+        )
 
         st.markdown("### Executive summary")
         st.info(research_result.executive_summary)

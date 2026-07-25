@@ -151,6 +151,23 @@ class PromptSecurityScanner:
             findings.extend(self._scan_text(normalized, label="normalized"))
         for index, candidate in enumerate(decoded, start=1):
             findings.extend(self._scan_text(candidate, label=f"decoded-{index}"))
+        if decoded and not any(
+            finding.category == SecurityCategory.ENCODING_EVASION for finding in findings
+        ):
+            findings.append(
+                Finding(
+                    category=SecurityCategory.ENCODING_EVASION,
+                    severity=Severity.MEDIUM,
+                    title="Encoded payload",
+                    description="The content required decoding before its text could be inspected.",
+                    evidence=original.strip().replace("\n", " ")[:220],
+                    start=0,
+                    end=min(len(original), 220),
+                    confidence=0.88,
+                    weight=18,
+                    remediation="Decode and inspect plausible encoded content before model processing.",
+                )
+            )
 
         findings = self._deduplicate(findings)
         risk_score = self._score(findings)
