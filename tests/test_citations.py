@@ -1,8 +1,11 @@
+from datetime import UTC, datetime
+
 from aegis_prompt_studio.models import SourceRecord
 from aegis_prompt_studio.research.citations import (
     canonical_public_url,
     domain_from_url,
     filter_sources,
+    parse_publication_date,
     trust_score_for_domain,
 )
 
@@ -41,3 +44,16 @@ def test_source_policy_is_enforced_after_retrieval() -> None:
         blocked_domains=["blocked.example.org"],
     )
     assert [item.domain for item in filtered] == ["docs.example.org"]
+
+
+def test_publication_dates_are_parsed_and_old_sources_are_filtered() -> None:
+    recent = source("https://example.gov/recent")
+    recent.published_at = parse_publication_date("2026-07-01")
+    old = source("https://example.gov/old")
+    old.published_at = parse_publication_date("2020-01-01")
+    filtered = filter_sources(
+        [old, recent],
+        recent_after=datetime(2024, 8, 9, tzinfo=UTC),
+    )
+    assert [item.title for item in filtered] == [recent.title]
+    assert recent.published_at == datetime(2026, 7, 1, tzinfo=UTC)

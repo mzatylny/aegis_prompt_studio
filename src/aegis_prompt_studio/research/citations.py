@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from ipaddress import ip_address
 from urllib.parse import urlparse, urlunparse
 
@@ -66,6 +67,23 @@ def trust_score_for_domain(domain: str) -> float:
     return 0.5
 
 
+def parse_publication_date(value: object) -> datetime | None:
+    """Parse common ISO-like publication dates returned by search providers."""
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip().replace("Z", "+00:00")
+    candidates = (normalized, f"{normalized}-01", f"{normalized}-01-01")
+    for candidate in candidates:
+        try:
+            parsed = datetime.fromisoformat(candidate)
+        except ValueError:
+            continue
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+    return None
+
+
 def canonical_public_url(url: str) -> str | None:
     """Validate and canonicalize a public HTTP(S) citation URL."""
     try:
@@ -103,6 +121,7 @@ def filter_sources(
     allowed_domains: Iterable[str] = (),
     blocked_domains: Iterable[str] = (),
     limit: int = 30,
+    recent_after: datetime | None = None,
 ) -> list[SourceRecord]:
     """Enforce domain policy again after retrieval and deduplicate canonical URLs."""
     allowed = [normalize_domain(item) for item in allowed_domains if normalize_domain(item)]
@@ -119,6 +138,12 @@ def filter_sources(
             continue
         if allowed and not any(domain_matches(domain, item) for item in allowed):
             continue
+        published_at = source.published_at
+        if published_at and recent_after:
+            comparable = published_at if published_at.tzinfo else published_at.replace(tzinfo=UTC)
+            cutoff = recent_after if recent_after.tzinfo else recent_after.replace(tzinfo=UTC)
+            if comparable < cutoff:
+                continue
         seen.add(canonical)
         selected.append(
             source.model_copy(
@@ -163,6 +188,9 @@ def extract_sources(response: object, limit: int = 30) -> list[SourceRecord]:
             continue
         title = node.get("title") or node.get("name") or domain_from_url(canonical) or "Web source"
         snippet = node.get("snippet") or node.get("text") or node.get("description") or ""
+        published_at = parse_publication_date(
+            node.get("published_at") or node.get("publication_date") or node.get("date")
+        )
         domain = domain_from_url(canonical)
         if canonical not in by_url:
             by_url[canonical] = SourceRecord(
@@ -170,6 +198,7 @@ def extract_sources(response: object, limit: int = 30) -> list[SourceRecord]:
                 url=canonical,
                 domain=domain,
                 snippet=str(snippet)[:700],
+                published_at=published_at,
                 trust_score=trust_score_for_domain(domain),
             )
         if len(by_url) >= limit:

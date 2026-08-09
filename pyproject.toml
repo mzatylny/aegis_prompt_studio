@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-prompt-studio"
-version = "1.1.0"
+version = "1.2.0"
 description = "Prompt security analysis and multi-agent research orchestration"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,8 +26,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.3,<9",
-  "pytest-cov>=6,<7",
+  "bandit>=1.9,<2",
+  "pip-audit>=2.10,<3",
+  "pytest>=9.0.3,<10",
+  "pytest-cov>=7,<8",
   "ruff>=0.9,<1",
 ]
 
@@ -44,6 +46,12 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.coverage.run]
+omit = ["src/aegis_prompt_studio/ui.py"]
+
+[tool.coverage.report]
+fail_under = 75
 
 [tool.ruff]
 line-length = 100

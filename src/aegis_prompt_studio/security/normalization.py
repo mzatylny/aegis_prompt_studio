@@ -33,13 +33,13 @@ def _is_plausible(decoded: str) -> bool:
     return ratio > 0.88 and alpha >= 4
 
 
-def _decode_once(text: str) -> list[str]:
+def _decode_once(text: str, max_candidate_chars: int) -> list[str]:
     decoded: list[str] = []
 
     def append(value: str) -> None:
         value = normalize_text(value).strip()
         if _is_plausible(value) and value not in decoded:
-            decoded.append(value[:4000])
+            decoded.append(value[:max_candidate_chars])
 
     for match in BASE64_TOKEN.finditer(text):
         token = match.group(1)
@@ -68,15 +68,21 @@ def _decode_once(text: str) -> list[str]:
     return decoded
 
 
-def decode_candidates(text: str, limit: int = 12, max_depth: int = 3) -> list[str]:
+def decode_candidates(
+    text: str,
+    limit: int = 32,
+    max_depth: int = 3,
+    max_candidate_chars: int = 50_000,
+) -> list[str]:
     """Extract bounded, multi-layer decoded payloads without executing them."""
+    max_candidate_chars = max(1, min(max_candidate_chars, 500_000))
     found: list[str] = []
-    seen = {normalize_text(text).strip()[:4000]}
+    seen = {normalize_text(text).strip()}
     frontier = list(seen)
     for _ in range(max(1, min(max_depth, 5))):
         next_frontier: list[str] = []
         for value in frontier:
-            for candidate in _decode_once(value):
+            for candidate in _decode_once(value, max_candidate_chars):
                 if candidate in seen:
                     continue
                 seen.add(candidate)
