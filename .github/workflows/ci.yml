@@ -4,9 +4,17 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -22,4 +30,5 @@ jobs:
       - run: ruff check .
       - run: bandit -r src -q
       - run: pytest --cov=aegis_prompt_studio --cov-report=term-missing
+      - run: aegis evaluate --min-precision 0.90 --min-recall 0.90 --min-f1 0.90
       - run: pip-audit --local --skip-editable

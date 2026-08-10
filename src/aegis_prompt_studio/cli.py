@@ -11,7 +11,8 @@ from rich.table import Table
 
 from aegis_prompt_studio.config import get_settings
 from aegis_prompt_studio.models import ResearchQuestion, SecurityScanRequest
-from aegis_prompt_studio.research.pipeline import ResearchPipeline
+from aegis_prompt_studio.research.pipeline import ResearchConfigurationError, ResearchPipeline
+from aegis_prompt_studio.security.evaluation import evaluate_scanner
 from aegis_prompt_studio.security.report import export_html, export_json
 from aegis_prompt_studio.security.scanner import PromptSecurityScanner
 
@@ -55,7 +56,10 @@ def research(
     depth: Annotated[str, typer.Option()] = "standard",
     output: Annotated[Path | None, typer.Option("--output")] = None,
 ) -> None:
-    result = ResearchPipeline().run(ResearchQuestion(question=question, depth=depth))
+    try:
+        result = ResearchPipeline().run(ResearchQuestion(question=question, depth=depth))
+    except ResearchConfigurationError as exc:
+        raise typer.ClickException(str(exc)) from exc
     console.print(Panel(result.executive_summary, title=f"Research ({result.mode})"))
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -65,6 +69,43 @@ def research(
         console.print(f"Report: {output}\nMetadata: {metadata}")
     else:
         console.print(result.report_markdown)
+
+
+@app.command()
+def evaluate(
+    dataset: Annotated[Path | None, typer.Option("--dataset")] = None,
+    risk_threshold: Annotated[int, typer.Option("--risk-threshold", min=0, max=100)] = 12,
+    min_precision: Annotated[float, typer.Option("--min-precision", min=0, max=1)] = 0.9,
+    min_recall: Annotated[float, typer.Option("--min-recall", min=0, max=1)] = 0.9,
+    min_f1: Annotated[float, typer.Option("--min-f1", min=0, max=1)] = 0.9,
+    json_out: Annotated[Path | None, typer.Option("--json-out")] = None,
+) -> None:
+    """Run the versioned scanner benchmark and enforce quality thresholds."""
+    report = evaluate_scanner(dataset_path=dataset, risk_threshold=risk_threshold)
+    summary = Table("Metric", "Result")
+    summary.add_row("Dataset", report.dataset_version)
+    summary.add_row("Cases", str(report.total_cases))
+    summary.add_row("Precision", f"{report.precision:.1%}")
+    summary.add_row("Recall", f"{report.recall:.1%}")
+    summary.add_row("Specificity", f"{report.specificity:.1%}")
+    summary.add_row("F1", f"{report.f1:.1%}")
+    summary.add_row("Failures", str(len(report.failures)))
+    console.print(summary)
+
+    category_table = Table("Category", "Recall")
+    for category, recall in report.per_category_recall.items():
+        category_table.add_row(category, f"{recall:.1%}")
+    console.print(category_table)
+
+    if json_out:
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+        console.print(f"Evaluation report: {json_out}")
+
+    if not report.meets_policy(min_precision, min_recall, min_f1):
+        console.print("[red]Evaluation policy failed.[/red]")
+        raise typer.Exit(code=1)
+    console.print("[green]Evaluation policy passed.[/green]")
 
 
 if __name__ == "__main__":

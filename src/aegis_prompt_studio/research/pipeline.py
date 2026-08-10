@@ -37,12 +37,20 @@ class ReportValidationError(RuntimeError):
     """Raised when a generated report breaks deterministic citation guarantees."""
 
 
+class ResearchConfigurationError(RuntimeError):
+    """Raised when the selected research mode is not safely configured."""
+
+
 class ResearchPipeline:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self.security = PromptSecurityScanner(max_chars=self.settings.max_input_chars)
 
     def run(self, request: ResearchQuestion) -> ResearchResult:
+        if not self.settings.configuration_ready:
+            raise ResearchConfigurationError(
+                "APP_MODE=live requires OPENAI_API_KEY; refusing to fall back to demo mode"
+            )
         started = perf_counter()
         traces: list[AgentTrace] = []
         security_result = self.security.scan(request.question)

@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         alias="MAX_CONCURRENT_RESEARCH",
     )
     api_access_key: str | None = Field(default=None, alias="AEGIS_API_KEY")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO",
+        alias="AEGIS_LOG_LEVEL",
+    )
     cors_origins: str = Field(
         default="http://localhost:8501,http://127.0.0.1:8501",
         alias="CORS_ORIGINS",
@@ -35,6 +39,11 @@ class Settings(BaseSettings):
     @property
     def live_enabled(self) -> bool:
         return self.app_mode == "live" and bool(self.openai_api_key)
+
+    @property
+    def configuration_ready(self) -> bool:
+        """Report whether the selected runtime mode has its required configuration."""
+        return self.app_mode == "demo" or bool(self.openai_api_key)
 
     @property
     def cors_origin_list(self) -> list[str]:

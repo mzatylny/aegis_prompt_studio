@@ -2,7 +2,11 @@ import pytest
 
 from aegis_prompt_studio.config import Settings
 from aegis_prompt_studio.models import Claim, ResearchPlan, ResearchQuestion, SourceRecord
-from aegis_prompt_studio.research.pipeline import ReportValidationError, ResearchPipeline
+from aegis_prompt_studio.research.pipeline import (
+    ReportValidationError,
+    ResearchConfigurationError,
+    ResearchPipeline,
+)
 from aegis_prompt_studio.research.provider import ClaimLedger, WebEvidence
 
 
@@ -43,6 +47,12 @@ def test_high_risk_topic_is_flagged_as_untrusted() -> None:
     )
     assert result.metrics["input_security_score"] >= 65
     assert "high-risk prompt-injection" in result.limitations[0]
+
+
+def test_live_mode_never_silently_falls_back_to_demo() -> None:
+    pipeline = ResearchPipeline(Settings(APP_MODE="live", OPENAI_API_KEY=None))
+    with pytest.raises(ResearchConfigurationError, match="refusing to fall back"):
+        pipeline.run(ResearchQuestion(question="What does the evidence show?"))
 
 
 def test_claim_ledger_removes_hallucinated_source_ids() -> None:

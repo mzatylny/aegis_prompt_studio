@@ -36,7 +36,10 @@ RULES: tuple[Rule, ...] = (
         Severity.CRITICAL,
         "Instruction hierarchy override",
         "The content attempts to replace or ignore higher-priority instructions.",
-        _rx(r"\b(ignore|disregard|forget|override|bypass)\b.{0,80}\b(previous|prior|above|system|developer|instructions?|rules?|policy)\b"),
+        _rx(
+            r"\b(ignore|disregard|forget|override|bypass)\b.{0,80}"
+            r"\b(previous|prior|above|earlier|system|developer|instructions?|rules?|policy|what came before)\b"
+        ),
         34,
         "Keep instruction hierarchy outside user content and reject override language.",
     ),
@@ -90,7 +93,10 @@ RULES: tuple[Rule, ...] = (
         Severity.MEDIUM,
         "Authority or urgency pressure",
         "The content uses claimed authority, urgency, or consequences to bypass controls.",
-        _rx(r"\b(authorized by|approved by|administrator says|urgent|immediately|required for compliance|do not question|failure to comply)\b"),
+        _rx(
+            r"\b(authorized by|approved by|administrator says|required for compliance|do not question|failure to comply)\b"
+            r"|\b(urgent|immediately)\b.{0,80}\b(bypass|disable|ignore|override|skip|policy|rules?|checks?)\b"
+        ),
         15,
         "Verify authorization outside the model and ignore urgency-based policy changes.",
     ),

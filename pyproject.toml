@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-prompt-studio"
-version = "1.2.0"
+version = "1.3.0"
 description = "Prompt security analysis and multi-agent research orchestration"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -42,6 +42,9 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+aegis_prompt_studio = ["data/*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
@@ -51,7 +54,7 @@ addopts = "-q"
 omit = ["src/aegis_prompt_studio/ui.py"]
 
 [tool.coverage.report]
-fail_under = 75
+fail_under = 90
 
 [tool.ruff]
 line-length = 100

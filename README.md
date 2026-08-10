@@ -1,11 +1,26 @@
 # Aegis Prompt Studio
 
-Aegis Prompt Studio combines two portfolio-grade prompt engineering systems:
+[![CI](https://github.com/mzatylny/aegis_prompt_studio/actions/workflows/ci.yml/badge.svg)](https://github.com/mzatylny/aegis_prompt_studio/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)
+![License MIT](https://img.shields.io/badge/License-MIT-2ea44f)
+
+Aegis Prompt Studio combines two production-minded prompt engineering systems:
 
 1. **Prompt Security Scanner** — detects prompt injection, hidden instruction extraction, tool abuse, data exfiltration, indirect injection, encoding evasions, delimiter breakouts, and role manipulation.
 2. **Multi-Agent Research Assistant** — coordinates planning, web research, adversarial critique, fact-checking, claim verification, source tracking, and final report generation.
 
-The application includes a Streamlit interface, a FastAPI service, a command-line client, automated tests, Docker support, JSON exports, and a no-key demonstration mode.
+The application includes a Streamlit interface, a FastAPI service, a command-line client, automated security evaluation, operational telemetry, Docker support, JSON exports, and a no-key demonstration mode.
+
+## Engineering evidence
+
+| Area | Evidence |
+|---|---|
+| Security quality | Versioned 41-case benchmark across 10 threat categories; CI gates precision, recall, and F1 |
+| Test quality | Python 3.11/3.12 matrix with a 90% coverage floor |
+| Research integrity | Source-policy enforcement, typed claim ledger, and deterministic final-citation validation |
+| Operations | Liveness/readiness probes, request correlation, structured privacy-safe logs, and Prometheus-compatible metrics |
+| Delivery | Least-privilege CI, dependency audit, non-root containers, health checks, and Dependabot |
+| Design | Architecture guide, threat model, operations runbook, evaluation methodology, and ADRs |
 
 ## Main capabilities
 
@@ -18,6 +33,7 @@ The application includes a Streamlit interface, a FastAPI service, a command-lin
 - Hardened prompt wrapper generation
 - 30-case adversarial prompt mutation suite, including nested and structured-data variants
 - JSON and standalone HTML reports
+- Versioned precision/recall/F1 benchmark and CI regression gate
 - API and CLI access
 
 ### Multi-Agent Research Assistant
@@ -43,7 +59,10 @@ src/aegis_prompt_studio/
 ├── cli.py
 ├── config.py
 ├── models.py
+├── observability.py
 ├── ui.py
+├── data/
+│   └── security_benchmark.json
 ├── research/
 │   ├── citations.py
 │   ├── demo.py
@@ -51,6 +70,7 @@ src/aegis_prompt_studio/
 │   └── provider.py
 └── security/
     ├── hardening.py
+    ├── evaluation.py
     ├── mutations.py
     ├── normalization.py
     ├── report.py
@@ -168,11 +188,19 @@ Coverage report:
 pytest --cov=aegis_prompt_studio --cov-report=term-missing
 ```
 
-Static checks:
+Run the security evaluation gate:
 
 ```bash
-ruff check .
+aegis evaluate --min-precision 0.90 --min-recall 0.90 --min-f1 0.90
 ```
+
+Run the same local quality gates used by CI:
+
+```bash
+make quality
+```
+
+The bundled v1.0.0 regression corpus currently records 100% precision, recall, specificity, accuracy, F1, and category recall at risk threshold 12. This is a regression baseline on a curated corpus, not a claim of universal detection. See [Security evaluation](docs/SECURITY_EVALUATION.md).
 
 ## Docker
 
@@ -199,6 +227,8 @@ Final report citations are validated again after the writer stage. Reports with 
 
 Oversized scanner input is rejected at every entry point instead of being silently truncated. Decoded candidates are bounded by the configured input limit while retaining their full inspected content.
 
+The documented [threat model](docs/THREAT_MODEL.md) defines assets, trust boundaries, abuse cases, security invariants, residual risks, and intentionally out-of-scope platform controls.
+
 ## API safeguards
 
 Local demo mode remains keyless. For shared or deployed environments, set an access key and explicit browser origins:
@@ -210,6 +240,26 @@ CORS_ORIGINS=https://your-ui.example
 ```
 
 Send the configured key in the `X-API-Key` header. Concurrent research runs beyond the configured capacity receive `429 Too Many Requests` with a retry hint. Production deployments should additionally place the service behind identity-aware authentication, per-user quotas, TLS, and centralized audit logging.
+
+`APP_MODE=live` never falls back silently: without `OPENAI_API_KEY`, readiness and research execution return `503`.
+
+## Observability and operations
+
+- `GET /health/live` — process liveness
+- `GET /health/ready` — mode/configuration readiness
+- `GET /metrics` — Prometheus-compatible request counts, durations, and in-flight work
+- `X-Request-ID` — validated caller correlation ID or a generated safe ID
+- structured JSON request logs — method, route template, status, duration, and request ID only
+
+Prompt text, research content, headers, credentials, and raw URLs are not written to request logs or metric labels. See the [operations runbook](docs/OPERATIONS.md) and architecture decisions for [deterministic security boundaries](docs/decisions/0001-deterministic-security-boundary.md) and [privacy-safe observability](docs/decisions/0002-privacy-safe-observability.md).
+
+## Version 1.3 highlights
+
+- reproducible security evaluation with dataset hashing, per-category recall, and CI policy thresholds
+- privacy-safe request correlation, structured JSON logs, and low-cardinality service metrics
+- separate liveness/readiness behavior and explicit rejection of misconfigured live mode
+- 90% coverage floor, least-privilege CI permissions, concurrency cancellation, and job timeout
+- threat model, reliability targets, incident runbook, evaluation methodology, and decision records
 
 ## Version 1.2 highlights
 

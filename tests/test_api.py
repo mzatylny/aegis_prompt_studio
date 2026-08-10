@@ -10,6 +10,45 @@ def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["ready"] is True
+    assert response.headers["X-Request-ID"]
+
+
+def test_request_id_is_preserved_when_safe_and_replaced_when_invalid() -> None:
+    safe = client.get("/health", headers={"X-Request-ID": "portfolio-demo-123"})
+    assert safe.headers["X-Request-ID"] == "portfolio-demo-123"
+    unsafe = client.get("/health", headers={"X-Request-ID": "contains spaces"})
+    assert unsafe.headers["X-Request-ID"] != "contains spaces"
+    assert len(unsafe.headers["X-Request-ID"]) == 32
+
+
+def test_liveness_readiness_and_metrics(monkeypatch) -> None:
+    assert client.get("/health/live").json() == {"status": "alive"}
+    ready = client.get("/health/ready")
+    assert ready.status_code == 200
+    assert ready.json()["configured"] is True
+
+    monkeypatch.setattr(settings, "app_mode", "live")
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    not_ready = client.get("/health/ready")
+    assert not_ready.status_code == 503
+    assert not_ready.json()["status"] == "not_ready"
+
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert "aegis_http_requests_total" in metrics_response.text
+    assert 'route="/health/ready"' in metrics_response.text
+
+
+def test_live_research_rejects_missing_provider_configuration(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_mode", "live")
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    response = client.post(
+        "/v1/research/run",
+        json={"question": "How are LLM evaluations designed?"},
+    )
+    assert response.status_code == 503
+    assert "OPENAI_API_KEY" in response.json()["detail"]
 
 
 def test_security_scan_endpoint() -> None:
