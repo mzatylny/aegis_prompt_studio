@@ -17,6 +17,7 @@ Raw input
   → HTML and Unicode normalization
   → invisible character removal
   → encoded payload extraction
+  → explicit rejection above the configured input boundary
   → rule engine over original, normalized, and decoded forms
   → finding deduplication
   → saturating risk aggregation
@@ -36,6 +37,7 @@ Untrusted topic
   → structured fact-checker
   → report writer
   → claim ledger, source list, trace, and quality score
+  → deterministic final-report citation validation
 ```
 
 ### Planner
@@ -84,6 +86,8 @@ Uses only the evidence dossier, critic review, verified claim ledger, and source
 
 FastAPI response models validate every public response.
 
+When `AEGIS_API_KEY` is configured, every POST endpoint requires a matching `X-API-Key` header. Research execution is bounded by `MAX_CONCURRENT_RESEARCH`; excess requests fail quickly with a retry hint rather than creating an unbounded queue.
+
 ## Extension points
 
 - add new security rules to `security/scanner.py`
@@ -92,4 +96,3 @@ FastAPI response models validate every public response.
 - persist traces and results in a database
 - add authentication and per-user quotas at the API layer
 - connect a vector store for internal document research
-

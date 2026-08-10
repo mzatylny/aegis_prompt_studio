@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from aegis_prompt_studio.config import get_settings
 from aegis_prompt_studio.models import ResearchQuestion, SecurityScanRequest
 from aegis_prompt_studio.research.pipeline import ResearchPipeline
 from aegis_prompt_studio.security.report import export_html, export_json
@@ -24,7 +25,12 @@ def scan(
     json_out: Annotated[Path | None, typer.Option("--json-out")] = None,
     html_out: Annotated[Path | None, typer.Option("--html-out")] = None,
 ) -> None:
-    result = PromptSecurityScanner().scan(SecurityScanRequest(text=text))
+    try:
+        result = PromptSecurityScanner(max_chars=get_settings().max_input_chars).scan(
+            SecurityScanRequest(text=text)
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="text") from exc
     console.print(Panel(result.summary, title="Security scan"))
     table = Table("Severity", "Category", "Evidence", "Remediation")
     for finding in result.findings:
@@ -63,4 +69,3 @@ def research(
 
 if __name__ == "__main__":
     app()
-

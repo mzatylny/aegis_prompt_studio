@@ -90,6 +90,7 @@ class SourceRecord(BaseModel):
     url: HttpUrl | str
     domain: str
     snippet: str = ""
+    published_at: datetime | None = None
     accessed_at: datetime = Field(default_factory=utc_now)
     trust_score: float = Field(default=0.5, ge=0, le=1)
 
@@ -156,4 +157,3 @@ class ResearchResult(BaseModel):
     trace: list[AgentTrace]
     quality_score: int = Field(ge=0, le=100)
     metrics: dict[str, int | float | str] = Field(default_factory=dict)
-

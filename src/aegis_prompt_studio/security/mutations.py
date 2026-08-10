@@ -170,5 +170,6 @@ class PromptMutationEngine:
                 purpose="Tests whether untrusted retrieval metadata is mistaken for authority.",
             ),
         ]
-        random.Random(17).shuffle(variants)
+        # Reproducible corpus order is intentional; this is not security randomness.
+        random.Random(17).shuffle(variants)  # nosec B311
         return MutationResult(source=text, variants=(variants + advanced)[:count])

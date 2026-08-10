@@ -195,6 +195,31 @@ Retrieved source URLs are canonicalized and checked again after provider retriev
 credential-bearing, blocked, and out-of-allowlist URLs are excluded. Claim source identifiers are
 validated against the resulting source index before the writer stage.
 
+Final report citations are validated again after the writer stage. Reports with invented source IDs or no verified citations are rejected instead of being returned as grounded output. When recent sources are requested, explicitly old dated sources are removed and undated sources are disclosed as a limitation.
+
+Oversized scanner input is rejected at every entry point instead of being silently truncated. Decoded candidates are bounded by the configured input limit while retaining their full inspected content.
+
+## API safeguards
+
+Local demo mode remains keyless. For shared or deployed environments, set an access key and explicit browser origins:
+
+```env
+AEGIS_API_KEY=replace-with-a-long-random-value
+MAX_CONCURRENT_RESEARCH=2
+CORS_ORIGINS=https://your-ui.example
+```
+
+Send the configured key in the `X-API-Key` header. Concurrent research runs beyond the configured capacity receive `429 Too Many Requests` with a retry hint. Production deployments should additionally place the service behind identity-aware authentication, per-user quotas, TLS, and centralized audit logging.
+
+## Version 1.2 highlights
+
+- corrected obfuscation false positives and long encoded-payload inspection
+- explicit oversized-input rejection across scanner entry points
+- final-report citation validation and publication-date-aware source filtering
+- optional API-key protection and bounded research concurrency
+- Python 3.11/3.12 CI with coverage and dependency-audit gates
+- non-root containers, service health checks, and dependency monitoring
+
 ## Version 1.1 highlights
 
 - recursive decoding with strict depth, size, and candidate limits

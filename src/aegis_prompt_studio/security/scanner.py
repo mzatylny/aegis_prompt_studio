@@ -117,7 +117,7 @@ RULES: tuple[Rule, ...] = (
         Severity.MEDIUM,
         "Obfuscated instruction text",
         "The content uses invisible characters or spaced lettering to evade matching.",
-        _rx(r"[\u200B-\u200D\u2060\uFEFF]|\b(?:i\W*g\W*n\W*o\W*r\W*e|s\W*y\W*s\W*t\W*e\W*m)\b"),
+        _rx(r"[\u200B-\u200D\u2060\uFEFF]|\b(?:i\W+g\W+n\W+o\W+r\W+e|s\W+y\W+s\W+t\W+e\W+m)\b"),
         20,
         "Normalize Unicode, remove zero-width characters, and rescan normalized content.",
     ),
@@ -141,9 +141,17 @@ class PromptSecurityScanner:
         started = perf_counter()
         if isinstance(request, str):
             request = SecurityScanRequest(text=request)
-        original = request.text[: self.max_chars]
+        if len(request.text) > self.max_chars:
+            raise ValueError(
+                f"Input contains {len(request.text)} characters; limit is {self.max_chars}."
+            )
+        original = request.text
         normalized = normalize_text(original)
-        decoded = decode_candidates(normalized) if request.decode_obfuscation else []
+        decoded = (
+            decode_candidates(normalized, max_candidate_chars=self.max_chars)
+            if request.decode_obfuscation
+            else []
+        )
 
         findings: list[Finding] = []
         findings.extend(self._scan_text(original, label="original"))
@@ -187,6 +195,7 @@ class PromptSecurityScanner:
             recommended_controls=recommended_controls(findings),
             metrics={
                 "input_characters": len(original),
+                "input_limit": self.max_chars,
                 "normalized_characters": len(normalized),
                 "decoded_candidates": len(decoded),
                 "finding_count": len(findings),
@@ -219,11 +228,15 @@ class PromptSecurityScanner:
 
     @staticmethod
     def _deduplicate(findings: list[Finding]) -> list[Finding]:
-        best: dict[tuple[str, str], Finding] = {}
+        best: dict[SecurityCategory, Finding] = {}
         for finding in findings:
-            key = (finding.category.value, finding.evidence.lower())
+            key = finding.category
             existing = best.get(key)
-            if existing is None or SEVERITY_RANK[finding.severity] > SEVERITY_RANK[existing.severity]:
+            if existing is None or (
+                SEVERITY_RANK[finding.severity], finding.confidence, finding.weight
+            ) > (
+                SEVERITY_RANK[existing.severity], existing.confidence, existing.weight
+            ):
                 best[key] = finding
         return sorted(
             best.values(),

@@ -106,14 +106,19 @@ with security_tab:
         run_scan = st.button("Run security scan", type="primary", use_container_width=True)
 
     if run_scan:
-        result = scanner.scan(
-            SecurityScanRequest(
-                text=text,
-                decode_obfuscation=decode,
-                include_hardened_prompt=harden,
+        if len(text) > settings.max_input_chars:
+            st.error(
+                f"Input contains {len(text)} characters; limit is {settings.max_input_chars}."
             )
-        )
-        st.session_state["security_result"] = result
+        else:
+            result = scanner.scan(
+                SecurityScanRequest(
+                    text=text,
+                    decode_obfuscation=decode,
+                    include_hardened_prompt=harden,
+                )
+            )
+            st.session_state["security_result"] = result
 
     result = st.session_state.get("security_result")
     with right:

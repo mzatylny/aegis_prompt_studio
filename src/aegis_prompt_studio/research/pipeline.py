@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -27,6 +28,13 @@ def now() -> datetime:
 class StageOutput:
     value: object
     trace: AgentTrace
+
+
+REPORT_CITATION = re.compile(r"\[([A-Za-z0-9][A-Za-z0-9_-]{5,63})\](?!\()")
+
+
+class ReportValidationError(RuntimeError):
+    """Raised when a generated report breaks deterministic citation guarantees."""
 
 
 class ResearchPipeline:
@@ -86,12 +94,14 @@ class ResearchPipeline:
         planner = self._stage("planner", request.question, lambda: provider.plan(request))
         traces.append(planner.trace)
         plan = planner.value
-        assert isinstance(plan, ResearchPlan)
+        if not isinstance(plan, ResearchPlan):
+            raise TypeError("Planner returned an invalid result type")
 
         researcher = self._stage("researcher", plan.objective, lambda: provider.research(request, plan))
         traces.append(researcher.trace)
         evidence = researcher.value
-        assert isinstance(evidence, WebEvidence)
+        if not isinstance(evidence, WebEvidence):
+            raise TypeError("Researcher returned an invalid result type")
 
         critic = self._stage("critic", evidence.text[:1000], lambda: provider.critique(request, evidence))
         traces.append(critic.trace)
@@ -104,7 +114,8 @@ class ResearchPipeline:
         )
         traces.append(checker.trace)
         ledger = checker.value
-        assert isinstance(ledger, ClaimLedger)
+        if not isinstance(ledger, ClaimLedger):
+            raise TypeError("Fact checker returned an invalid result type")
         ledger = self._validate_ledger(ledger, evidence.sources)
 
         writer = self._stage(
@@ -114,11 +125,18 @@ class ResearchPipeline:
         )
         traces.append(writer.trace)
         report = str(writer.value)
+        citation_metrics = self._validate_report_citations(report, evidence.sources, ledger.claims)
 
         executive = self._extract_executive_summary(report)
         limitations = ledger.limitations or [
             "The report is limited by the coverage and accessibility of web sources returned during this run."
         ]
+        if request.require_recent_sources:
+            undated = sum(source.published_at is None for source in evidence.sources)
+            if undated:
+                limitations.append(
+                    f"{undated} source(s) lacked publication metadata and could not be recency-verified."
+                )
         return ResearchResult(
             mode="live",
             question=request.question,
@@ -130,19 +148,25 @@ class ResearchPipeline:
             limitations=limitations,
             trace=traces,
             quality_score=0,
-            metrics={"depth": request.depth, "style": request.output_style},
+            metrics={
+                "depth": request.depth,
+                "style": request.output_style,
+                **citation_metrics,
+            },
         )
 
     def _run_demo(self, request: ResearchQuestion, traces: list[AgentTrace]) -> ResearchResult:
         planner = self._stage("planner", request.question, lambda: demo_plan(request.question))
         traces.append(planner.trace)
         plan = planner.value
-        assert isinstance(plan, ResearchPlan)
+        if not isinstance(plan, ResearchPlan):
+            raise TypeError("Demo planner returned an invalid result type")
 
         researcher = self._stage("researcher", plan.objective, demo_sources)
         traces.append(researcher.trace)
         sources = researcher.value
-        assert isinstance(sources, list)
+        if not isinstance(sources, list):
+            raise TypeError("Demo researcher returned an invalid result type")
 
         critic = self._stage(
             "critic",
@@ -154,7 +178,8 @@ class ResearchPipeline:
         checker = self._stage("fact_checker", str(critic.value), lambda: demo_claims(sources))
         traces.append(checker.trace)
         claims = checker.value
-        assert isinstance(claims, list)
+        if not isinstance(claims, list):
+            raise TypeError("Demo fact checker returned an invalid result type")
 
         writer = self._stage(
             "writer",
@@ -234,6 +259,30 @@ class ResearchPipeline:
         return ledger.model_copy(update={"claims": validated}, deep=True)
 
     @staticmethod
+    def _validate_report_citations(
+        report: str,
+        sources: list[SourceRecord],
+        claims: list[Claim],
+    ) -> dict[str, int | float | str]:
+        """Reject invented final-report citations after the writer stage."""
+        valid_ids = {source.id.lower() for source in sources}
+        cited_ids = [match.group(1).lower() for match in REPORT_CITATION.finditer(report)]
+        unknown_ids = sorted(set(cited_ids) - valid_ids)
+        if unknown_ids:
+            raise ReportValidationError(
+                f"Final report cited unknown source IDs: {', '.join(unknown_ids)}"
+            )
+        supported_claims = [claim for claim in claims if claim.status in {"supported", "mixed"}]
+        if valid_ids and supported_claims and not cited_ids:
+            raise ReportValidationError("Final report did not cite any verified source IDs")
+        unique_cited = set(cited_ids)
+        return {
+            "report_citation_count": len(cited_ids),
+            "report_unique_citation_count": len(unique_cited),
+            "report_citation_integrity_percent": 100.0,
+        }
+
+    @staticmethod
     def _evidence_metrics(result: ResearchResult) -> dict[str, int | float | str]:
         source_ids = {source.id for source in result.sources}
         total = len(result.claims)
@@ -243,10 +292,14 @@ class ResearchPipeline:
             if claim.source_ids and all(source_id in source_ids for source_id in claim.source_ids)
         )
         supported = sum(1 for claim in result.claims if claim.status == "supported")
+        dated = sum(source.published_at is not None for source in result.sources)
         return {
             "citation_integrity_percent": round((cited / total) * 100, 1) if total else 100.0,
             "supported_claim_percent": round((supported / total) * 100, 1) if total else 0.0,
             "unique_source_domains": len({source.domain for source in result.sources}),
+            "dated_source_percent": (
+                round((dated / len(result.sources)) * 100, 1) if result.sources else 0.0
+            ),
         }
 
     @staticmethod

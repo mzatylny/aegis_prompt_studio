@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+import secrets
+from threading import BoundedSemaphore
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from aegis_prompt_studio import __version__
@@ -23,6 +26,7 @@ settings = get_settings()
 scanner = PromptSecurityScanner(max_chars=settings.max_input_chars)
 mutator = PromptMutationEngine()
 pipeline = ResearchPipeline(settings)
+research_slots = BoundedSemaphore(settings.max_concurrent_research)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -32,11 +36,20 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+def require_api_access(x_api_key: str | None) -> None:
+    """Require the configured API key without forcing auth in local demo mode."""
+    expected = settings.api_access_key
+    if not expected:
+        return
+    if x_api_key is None or not secrets.compare_digest(x_api_key, expected):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 @app.get("/health")
@@ -50,23 +63,41 @@ def health() -> dict[str, str | bool]:
 
 
 @app.post("/v1/security/scan", response_model=SecurityScanResult)
-def scan_prompt(request: SecurityScanRequest) -> SecurityScanResult:
+def scan_prompt(
+    request: SecurityScanRequest,
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+) -> SecurityScanResult:
+    require_api_access(x_api_key)
     if len(request.text) > settings.max_input_chars:
         raise HTTPException(status_code=413, detail="Input exceeds configured character limit")
     return scanner.scan(request)
 
 
 @app.post("/v1/security/mutate", response_model=MutationResult)
-def mutate_prompt(request: MutationRequest) -> MutationResult:
+def mutate_prompt(
+    request: MutationRequest,
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+) -> MutationResult:
+    require_api_access(x_api_key)
     if len(request.text) > settings.max_input_chars:
         raise HTTPException(status_code=413, detail="Input exceeds configured character limit")
     return mutator.generate(request.text, request.count)
 
 
 @app.post("/v1/research/run", response_model=ResearchResult)
-def run_research(request: ResearchQuestion) -> ResearchResult:
+def run_research(
+    request: ResearchQuestion,
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+) -> ResearchResult:
+    require_api_access(x_api_key)
     if len(request.question) > settings.max_input_chars:
         raise HTTPException(status_code=413, detail="Question exceeds configured character limit")
+    if not research_slots.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail="Research capacity is currently full; retry later",
+            headers={"Retry-After": "5"},
+        )
     try:
         return pipeline.run(request)
     except Exception as exc:  # pragma: no cover - protects API boundary in live mode
@@ -75,3 +106,5 @@ def run_research(request: ResearchQuestion) -> ResearchResult:
             status_code=502,
             detail="Research pipeline failed. Check server logs for the diagnostic trace.",
         ) from exc
+    finally:
+        research_slots.release()
