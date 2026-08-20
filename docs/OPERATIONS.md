@@ -46,6 +46,18 @@ The middleware does not read request bodies. Do not add prompt text, research co
 - Provider or pipeline failures return `502` with details kept in server logs.
 - Research concurrency is process-local; multi-replica deployments need a gateway or distributed quota service for global limits.
 
+## OpenAI transport and TLS
+
+OpenAI Python SDK 3.x uses HTTPX2 internally. The application constructs the default SDK client;
+do not inject a legacy `httpx.Client` into it. If a custom proxy, transport, timeout object, event
+hook, or request mock is required, use `httpx2` and the SDK's `DefaultHttpx2Client` helpers.
+
+HTTPX2 verifies TLS certificates against the operating-system trust store. Deployments behind a
+TLS-inspecting proxy or private certificate authority must install the required CA certificate in
+that trust store or configure `SSL_CERT_FILE`/`SSL_CERT_DIR`. Validate this with a live staging
+request from the same container image used in production. A deployment configured with a
+`socks5://` or `socks5h://` proxy must also install the HTTPX2 SOCKS dependency (`socksio`).
+
 ## Incident checklist
 
 1. Confirm readiness, error rate, latency, and in-flight work.
