@@ -4,7 +4,7 @@ install:
 	python -m pip install -r requirements.txt
 
 test:
-	pytest --cov=aegis_prompt_studio --cov-report=term-missing
+	pytest --cov=src/aegis_prompt_studio --cov-report=term-missing
 
 evaluate:
 	aegis evaluate --min-precision 0.90 --min-recall 0.90 --min-f1 0.90

@@ -20,8 +20,10 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -29,6 +31,15 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: bandit -r src -q
-      - run: pytest --cov=aegis_prompt_studio --cov-report=term-missing
+      - run: pytest --cov=src/aegis_prompt_studio --cov-report=term-missing
       - run: aegis evaluate --min-precision 0.90 --min-recall 0.90 --min-f1 0.90
       - run: pip-audit --local --skip-editable
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: docker build --tag aegis-prompt-studio:ci .

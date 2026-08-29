@@ -86,7 +86,7 @@ digraph G {
   Input -> SecurityGate -> Planner -> Researcher -> Critic -> FactChecker -> Writer -> Report;
 }
 """,
-        use_container_width=True,
+        width="stretch",
     )
 
 security_tab, research_tab = st.tabs(["🛡️ Prompt Security Scanner", "🔎 Multi-Agent Research"])
@@ -103,7 +103,7 @@ with security_tab:
         c1, c2 = st.columns(2)
         decode = c1.checkbox("Decode obfuscation", value=True)
         harden = c2.checkbox("Generate hardened wrapper", value=True)
-        run_scan = st.button("Run security scan", type="primary", use_container_width=True)
+        run_scan = st.button("Run security scan", type="primary", width="stretch")
 
     if run_scan:
         if len(text) > settings.max_input_chars:
@@ -150,7 +150,7 @@ with security_tab:
             }
             for finding in result.findings
         ]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
         category_counts = Counter(f.category.value for f in result.findings)
         if category_counts:
@@ -209,7 +209,9 @@ with research_tab:
         blocked_domains_input = domain_c2.text_input(
             "Blocked domains (comma-separated, optional)"
         )
-        submitted = st.form_submit_button("Launch research workflow", type="primary", use_container_width=True)
+        submitted = st.form_submit_button(
+            "Launch research workflow", type="primary", width="stretch"
+        )
 
     if submitted:
         allowed_domains = [item.strip() for item in domains.split(",") if item.strip()]
@@ -269,7 +271,7 @@ with research_tab:
                         "output": item.output_summary,
                     }
                 )
-            st.dataframe(pd.DataFrame(trace_rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(trace_rows), width="stretch", hide_index=True)
 
         st.markdown("### Claim ledger")
         claim_rows = [
@@ -282,7 +284,7 @@ with research_tab:
             }
             for claim in research_result.claims
         ]
-        st.dataframe(pd.DataFrame(claim_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(claim_rows), width="stretch", hide_index=True)
 
         st.markdown("### Final report")
         st.markdown(research_result.report_markdown)
@@ -301,12 +303,12 @@ with research_tab:
             data=research_result.report_markdown,
             file_name=f"research-{research_result.run_id[:8]}.md",
             mime="text/markdown",
-            use_container_width=True,
+            width="stretch",
         )
         d2.download_button(
             "Download full run (JSON)",
             data=json.dumps(research_result.model_dump(mode="json"), indent=2),
             file_name=f"research-{research_result.run_id[:8]}.json",
             mime="application/json",
-            use_container_width=True,
+            width="stretch",
         )
