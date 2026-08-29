@@ -51,7 +51,7 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.coverage.run]
-omit = ["src/aegis_prompt_studio/ui.py"]
+concurrency = ["thread"]
 
 [tool.coverage.report]
 fail_under = 90

@@ -16,10 +16,10 @@ The application includes a Streamlit interface, a FastAPI service, a command-lin
 | Area | Evidence |
 |---|---|
 | Security quality | Versioned 41-case benchmark across 10 threat categories; CI gates precision, recall, and F1 |
-| Test quality | Python 3.11/3.12 matrix with a 90% coverage floor |
+| Test quality | Python 3.11/3.12 matrix with a 90% coverage floor and interactive Streamlit smoke tests |
 | Research integrity | Source-policy enforcement, typed claim ledger, and deterministic final-citation validation |
 | Operations | Liveness/readiness probes, request correlation, structured privacy-safe logs, and Prometheus-compatible metrics |
-| Delivery | Least-privilege CI, dependency audit, non-root containers, health checks, and Dependabot |
+| Delivery | Least-privilege CI, CodeQL, dependency audit, verified Docker builds, non-root containers, health checks, and Dependabot |
 | Design | Architecture guide, threat model, operations runbook, evaluation methodology, and ADRs |
 
 ## Main capabilities
@@ -185,7 +185,7 @@ pytest
 Coverage report:
 
 ```bash
-pytest --cov=aegis_prompt_studio --cov-report=term-missing
+pytest --cov=src/aegis_prompt_studio --cov-report=term-missing
 ```
 
 Run the security evaluation gate:
