@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         alias="MAX_CONCURRENT_RESEARCH",
     )
     api_access_key: str | None = Field(default=None, alias="AEGIS_API_KEY")
+    api_url: str = Field(default="http://127.0.0.1:8000", alias="AEGIS_API_URL")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         default="INFO",
         alias="AEGIS_LOG_LEVEL",
