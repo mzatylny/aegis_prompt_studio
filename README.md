@@ -102,6 +102,11 @@ The script creates a virtual environment, installs the package, starts the API, 
 
 ## Run the interface manually
 
+Start the API in a separate terminal first (see below). The interface sends research
+requests to `AEGIS_API_URL`, which defaults to `http://127.0.0.1:8000`, so browser
+sessions share the API's concurrency limit. When `AEGIS_API_KEY` is configured, enter
+that key in the interface sidebar; it is never filled in from the server environment.
+
 ```bash
 streamlit run src/aegis_prompt_studio/ui.py
 ```
@@ -240,6 +245,10 @@ CORS_ORIGINS=https://your-ui.example
 ```
 
 Send the configured key in the `X-API-Key` header. Concurrent research runs beyond the configured capacity receive `429 Too Many Requests` with a retry hint. Production deployments should additionally place the service behind identity-aware authentication, per-user quotas, TLS, and centralized audit logging.
+
+The Streamlit interface checks the configured access key before exposing its tools.
+Research always runs through the API, including demo requests; the UI has no direct
+research execution path. Docker Compose keeps provider credentials in the API service.
 
 `APP_MODE=live` never falls back silently: without `OPENAI_API_KEY`, readiness and research execution return `503`.
 

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import secrets
 from collections import Counter
 
 import pandas as pd
 import streamlit as st
 
+from aegis_prompt_studio.api_client import ResearchRequestError, request_research
 from aegis_prompt_studio.config import get_settings
 from aegis_prompt_studio.models import ResearchQuestion, SecurityScanRequest
-from aegis_prompt_studio.research.pipeline import ResearchPipeline
 from aegis_prompt_studio.security.mutations import PromptMutationEngine
 from aegis_prompt_studio.security.scanner import PromptSecurityScanner
 
@@ -56,7 +57,6 @@ code { white-space: pre-wrap !important; }
 settings = get_settings()
 scanner = PromptSecurityScanner(max_chars=settings.max_input_chars)
 mutator = PromptMutationEngine()
-pipeline = ResearchPipeline(settings)
 
 st.markdown(
     """
@@ -72,8 +72,8 @@ st.markdown(
 with st.sidebar:
     st.subheader("Runtime")
     st.metric("Mode", settings.app_mode.upper())
-    st.metric("Live provider", "READY" if settings.live_enabled else "DEMO")
-    st.caption("Live mode requires APP_MODE=live and OPENAI_API_KEY in .env.")
+    access_key = st.text_input("Access key", type="password", key="access_key")
+    st.caption("Enter the access key supplied by the operator for protected deployments.")
     st.divider()
     st.subheader("Workflow")
     st.graphviz_chart(
@@ -88,6 +88,12 @@ digraph G {
 """,
         use_container_width=True,
     )
+
+if settings.api_access_key and not secrets.compare_digest(
+    access_key.encode("utf-8"), settings.api_access_key.encode("utf-8")
+):
+    st.warning("Enter a valid access key in the sidebar to continue.")
+    st.stop()
 
 security_tab, research_tab = st.tabs(["🛡️ Prompt Security Scanner", "🔎 Multi-Agent Research"])
 
@@ -226,7 +232,14 @@ with research_tab:
                 allowed_domains=allowed_domains,
                 blocked_domains=blocked_domains,
             )
-            research_result = pipeline.run(request)
+            try:
+                research_result = request_research(
+                    request, base_url=settings.api_url, access_key=access_key
+                )
+            except ResearchRequestError as exc:
+                status.update(label="Research could not start", state="error")
+                st.error(str(exc))
+                st.stop()
             st.write("Planner, researcher, critic, fact-checker and writer completed")
             status.update(label="Research workflow complete", state="complete")
         st.session_state["research_result"] = research_result

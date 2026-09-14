@@ -16,8 +16,11 @@ services:
   ui:
     build: .
     command: streamlit run src/aegis_prompt_studio/ui.py --server.address=0.0.0.0 --server.port=8501
-    env_file:
-      - .env
+    environment:
+      APP_MODE: ${APP_MODE:-demo}
+      AEGIS_API_KEY: ${AEGIS_API_KEY:-}
+      AEGIS_API_URL: http://api:8000
+      MAX_INPUT_CHARS: ${MAX_INPUT_CHARS:-50000}
     ports:
       - "8501:8501"
     depends_on:
