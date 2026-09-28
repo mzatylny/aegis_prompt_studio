@@ -123,3 +123,22 @@ def test_live_provider_runs_critic_fact_checker_and_writer() -> None:
 def test_live_provider_requires_an_api_key() -> None:
     with pytest.raises(ValueError, match="OPENAI_API_KEY"):
         OpenAIResearchProvider(Settings(APP_MODE="live", OPENAI_API_KEY=None))
+
+
+def test_live_provider_constructs_default_openai_client_without_network(monkeypatch) -> None:
+    for variable in (
+        "ALL_PROXY",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "all_proxy",
+        "https_proxy",
+        "http_proxy",
+    ):
+        monkeypatch.delenv(variable, raising=False)
+    provider = OpenAIResearchProvider(
+        Settings(APP_MODE="live", OPENAI_API_KEY="test-key")
+    )
+    try:
+        assert provider.client.responses is not None
+    finally:
+        provider.client.close()
